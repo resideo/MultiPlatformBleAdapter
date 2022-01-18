@@ -75,6 +75,8 @@ import Foundation
                            reject: Reject)
 
     func discoverAllServicesAndCharacteristicsForDevice(_ deviceIdentifier: String,
+                                                        serviceUuids: [String]?,
+                                                        characteristicUuids: [String]?,
                                                         transactionId: String,
                                                         resolve: @escaping Resolve,
                                                         reject: @escaping Reject)

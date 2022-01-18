@@ -503,6 +503,8 @@ public class BleClientManager : NSObject {
     // user should discover all services and characteristics for peripheral.
     @objc
     public func discoverAllServicesAndCharacteristicsForDevice(_ deviceIdentifier: String,
+                                                                    serviceUuids: [String]?,
+                                                             characteristicUuids: [String]?,
                                                                     transactionId: String,
                                                                           resolve: @escaping Resolve,
                                                                            reject: @escaping Reject) {
@@ -516,22 +518,44 @@ public class BleClientManager : NSObject {
             BleError.peripheralNotConnected(deviceIdentifier).callReject(reject)
             return
         }
+        
+        var serviceUUIDs : [CBUUID]? = nil
+        if let ids = serviceUuids {
+            serviceUUIDs = []
+            for id in ids {
+                if let uuid = id.toCBUUID() {
+                    serviceUUIDs?.append(uuid)
+                }
+            }
+        }
+        
+        var characteristicUUIDs : [CBUUID]? = nil
+        if let ids = characteristicUuids {
+            characteristicUUIDs = []
+            for id in ids {
+                if let uuid = id.toCBUUID() {
+                    characteristicUUIDs?.append(uuid)
+                }
+            }
+        }
 
-        safeDiscoverAllServicesAndCharacteristicsForDevice(peripheral, transactionId: transactionId, promise: SafePromise(resolve: resolve, reject: reject))
+        safeDiscoverAllServicesAndCharacteristicsForDevice(peripheral, serviceUUIDs: serviceUUIDs, characteristicUUIDs: characteristicUUIDs, transactionId: transactionId, promise: SafePromise(resolve: resolve, reject: reject))
     }
 
     func safeDiscoverAllServicesAndCharacteristicsForDevice(_ peripheral: Peripheral,
+                                                            serviceUUIDs: [CBUUID]?,
+                                                     characteristicUUIDs: [CBUUID]?,
                                                            transactionId: String,
                                                                  promise: SafePromise) {
         let disposable = peripheral
-            .discoverServices(nil)
+            .discoverServices(serviceUUIDs)
             .flatMap { [weak self] services -> Observable<Service> in
                 for service in services {
                     self?.discoveredServices[service.jsIdentifier] = service
                 }
                 return Observable.from(services)
             }
-            .flatMap { $0.discoverCharacteristics(nil) }
+            .flatMap { $0.discoverCharacteristics(characteristicUUIDs) }
             .flatMap { [weak self] characteristics -> Observable<Characteristic> in
                 for characteristic in characteristics {
                     self?.discoveredCharacteristics[characteristic.jsIdentifier] = characteristic

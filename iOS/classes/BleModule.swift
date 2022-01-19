@@ -503,8 +503,8 @@ public class BleClientManager : NSObject {
     // user should discover all services and characteristics for peripheral.
     @objc
     public func discoverAllServicesAndCharacteristicsForDevice(_ deviceIdentifier: String,
-                                                                    serviceUuids: [String]?,
-                                                             characteristicUuids: [String]?,
+                                                                      serviceUuid: String?,
+                                                            characteristicUuids: [String]?,
                                                                     transactionId: String,
                                                                           resolve: @escaping Resolve,
                                                                            reject: @escaping Reject) {
@@ -520,21 +520,19 @@ public class BleClientManager : NSObject {
         }
         
         var serviceUUIDs : [CBUUID]? = nil
-        if let ids = serviceUuids {
-            serviceUUIDs = []
-            for id in ids {
-                if let uuid = id.toCBUUID() {
-                    serviceUUIDs?.append(uuid)
-                }
-            }
-        }
-        
         var characteristicUUIDs : [CBUUID]? = nil
-        if let ids = characteristicUuids {
-            characteristicUUIDs = []
-            for id in ids {
-                if let uuid = id.toCBUUID() {
-                    characteristicUUIDs?.append(uuid)
+        if let serviceUUID = serviceUuid {
+            serviceUUIDs = []
+            if let uuid = serviceUUID.toCBUUID() {
+                serviceUUIDs?.append(uuid)
+                
+                if let ids = characteristicUuids {
+                    characteristicUUIDs = []
+                    for id in ids {
+                        if let uuid = id.toCBUUID() {
+                            characteristicUUIDs?.append(uuid)
+                        }
+                    }
                 }
             }
         }
@@ -555,7 +553,7 @@ public class BleClientManager : NSObject {
                 }
                 return Observable.from(services)
             }
-            .flatMap { $0.discoverCharacteristics(characteristicUUIDs) }
+            .flatMap { $0.discoverCharacteristics(serviceUUIDs != nil ? characteristicUUIDs : nil) }
             .flatMap { [weak self] characteristics -> Observable<Characteristic> in
                 for characteristic in characteristics {
                     self?.discoveredCharacteristics[characteristic.jsIdentifier] = characteristic

@@ -45,6 +45,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
+import java.util.logging.*;
 
 import rx.Observable;
 import rx.Observer;
@@ -1408,6 +1409,17 @@ public class BleModule implements BleAdapter {
                                                                     final String transactionId,
                                                                     final OnSuccessCallback<Device> onSuccessCallback,
                                                                     final OnErrorCallback onErrorCallback) {
+        private static Logger logger = Logger.getLogger("BleModule.java");
+        logger.fine("Start: safeDiscoverAllServicesAndCharacteristicsForDevice");
+        try {
+            Method m = device.getBluetoothDevice().getClass().getMethod("removeBond", (Class[]) null);
+            m.invoke(device, (Object[]) null);
+            logger.fine("removeBond called");
+        } catch (Exception e) {
+            Log.e(TAG, e.getMessage());
+            logger.log(Level.WARNING, "removeBond failed", e);
+        }
+
         final RxBleConnection connection = getConnectionOrEmitError(device.getId(), onErrorCallback);
         if (connection == null) {
             return;

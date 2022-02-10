@@ -506,6 +506,22 @@ public class BleModule implements BleAdapter {
     }
 
     @Override
+    public void removeBondForDevice(String deviceIdentifier,
+                                    String transactionId,
+                                    OnSuccessCallback<Device> onSuccessCallback,
+                                    OnErrorCallback onErrorCallback) {
+        final Device device;
+        try {
+            device = getDeviceById(deviceIdentifier);
+        } catch (BleError error) {
+            onErrorCallback.onError(error);
+            return;
+        }
+
+        safeRemoveBondForDevice(device, transactionId, onSuccessCallback, onErrorCallback);
+    }
+
+    @Override
     public List<Service> getServicesForDevice(String deviceIdentifier) throws BleError {
         final Device device = getDeviceById(deviceIdentifier);
         final List<Service> services = device.getServices();
@@ -1408,16 +1424,6 @@ public class BleModule implements BleAdapter {
                                                                     final String transactionId,
                                                                     final OnSuccessCallback<Device> onSuccessCallback,
                                                                     final OnErrorCallback onErrorCallback) {
-        Log.d(TAG, "Start: safeDiscoverAllServicesAndCharacteristicsForDevice");
-        try {
-            Method m = device.getBluetoothDevice().getClass().getMethod("removeBond", (Class[]) null);
-            m.invoke(device, (Object[]) null);
-            Log.d(TAG, "removeBond called");
-        } catch (Exception e) {
-            Log.e(TAG, e.getMessage());
-            Log.e(TAG, "removeBond failed");
-        }
-
         final RxBleConnection connection = getConnectionOrEmitError(device.getId(), onErrorCallback);
         if (connection == null) {
             return;
@@ -1470,6 +1476,21 @@ public class BleModule implements BleAdapter {
                 });
 
         pendingTransactions.replaceSubscription(transactionId, subscription);
+    }
+
+    private void safeRemoveBondForDevice(final Device device,
+                                        final String transactionId,
+                                        final OnSuccessCallback<Device> onSuccessCallback,
+                                        final OnErrorCallback onErrorCallback) {
+        Log.d(TAG, "Start: safeRemoveBondForDevice");
+        try {
+            Method m = device.getBluetoothDevice().getClass().getMethod("removeBond", (Class[]) null);
+            m.invoke(device, (Object[]) null);
+            Log.d(TAG, "removeBond called");
+        } catch (Exception e) {
+            Log.e(TAG, e.getMessage());
+            Log.e(TAG, "removeBond failed");
+        }
     }
 
     private void safeReadCharacteristicForDevice(final Characteristic characteristic,

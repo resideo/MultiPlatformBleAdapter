@@ -1410,11 +1410,11 @@ public class BleModule implements BleAdapter {
                                                                     final OnSuccessCallback<Device> onSuccessCallback,
                                                                     final OnErrorCallback onErrorCallback) {
         private static Logger logger = Logger.getLogger("BleModule.java");
-        logger.fine("Start: safeDiscoverAllServicesAndCharacteristicsForDevice");
+        logger.warn("Start: safeDiscoverAllServicesAndCharacteristicsForDevice");
         try {
             Method m = device.getBluetoothDevice().getClass().getMethod("removeBond", (Class[]) null);
             m.invoke(device, (Object[]) null);
-            logger.fine("removeBond called");
+            logger.warn("removeBond called");
         } catch (Exception e) {
             Log.e(TAG, e.getMessage());
             logger.log(Level.WARNING, "removeBond failed", e);

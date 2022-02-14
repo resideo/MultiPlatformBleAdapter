@@ -247,4 +247,5 @@ public interface BleAdapter {
     void setLogLevel(String logLevel);
 
     String getLogLevel();
+    void setPermissions();
 }

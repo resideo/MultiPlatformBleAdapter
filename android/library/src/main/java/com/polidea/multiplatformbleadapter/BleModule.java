@@ -1742,4 +1742,8 @@ public class BleModule implements BleAdapter {
             }
         }
     }
+
+    void setPermissions(){
+        System.out.println("setPermissions..");
+    }
 }

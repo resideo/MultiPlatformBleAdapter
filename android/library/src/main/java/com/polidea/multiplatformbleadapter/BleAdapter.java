@@ -208,6 +208,18 @@ public interface BleAdapter {
             OnSuccessCallback<Descriptor> onSuccessCallback,
             OnErrorCallback onErrorCallback);
 
+    void removeBondForDevice(
+            String deviceIdentifier,
+            String transactionId,
+            OnSuccessCallback<Device> onSuccessCallback,
+            OnErrorCallback onErrorCallback);
+
+    void getBondStateForDevice(
+            String deviceIdentifier,
+            String transactionId,
+            OnSuccessCallback<Integer> onSuccessCallback,
+            OnErrorCallback onErrorCallback);
+
     void writeDescriptorForDevice(
             final String deviceId,
             final String serviceUUID,

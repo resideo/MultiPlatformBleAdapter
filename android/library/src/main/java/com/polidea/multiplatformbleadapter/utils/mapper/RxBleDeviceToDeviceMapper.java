@@ -1,5 +1,6 @@
 package com.polidea.multiplatformbleadapter.utils.mapper;
 
+import android.bluetooth.BluetoothDevice;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 
@@ -10,7 +11,7 @@ import com.polidea.rxandroidble.RxBleDevice;
 public class RxBleDeviceToDeviceMapper {
 
     public Device map(@NonNull RxBleDevice rxDevice, @Nullable RxBleConnection connection) {
-        Device device = new Device(rxDevice.getMacAddress(), rxDevice.getName());
+        Device device = new Device(rxDevice.getMacAddress(), rxDevice.getName(), rxDevice.getBluetoothDevice());
         if (connection != null) {
             device.setMtu(connection.getMtu());
         }

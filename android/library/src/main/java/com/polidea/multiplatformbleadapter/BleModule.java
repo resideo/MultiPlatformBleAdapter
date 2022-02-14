@@ -40,6 +40,7 @@ import com.polidea.rxandroidble.internal.RxBleLog;
 import com.polidea.rxandroidble.scan.ScanFilter;
 import com.polidea.rxandroidble.scan.ScanSettings;
 
+import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -503,6 +504,38 @@ public class BleModule implements BleAdapter {
         }
 
         safeDiscoverAllServicesAndCharacteristicsForDevice(device, transactionId, onSuccessCallback, onErrorCallback);
+    }
+
+    @Override
+    public void removeBondForDevice(String deviceIdentifier,
+                                    String transactionId,
+                                    OnSuccessCallback<Device> onSuccessCallback,
+                                    OnErrorCallback onErrorCallback) {
+        final Device device;
+        try {
+            device = getKnownDeviceById(deviceIdentifier);
+        } catch (BleError error) {
+            onErrorCallback.onError(error);
+            return;
+        }
+
+        safeRemoveBondForDevice(device, transactionId, onSuccessCallback, onErrorCallback);
+    }
+
+    @Override
+    public void getBondStateForDevice(String deviceIdentifier,
+                                    String transactionId,
+                                    OnSuccessCallback<Integer> onSuccessCallback,
+                                    OnErrorCallback onErrorCallback) {
+        final Device device;
+        try {
+            device = getDeviceById(deviceIdentifier);
+            final int state = device.getBluetoothDevice().getBondState();
+            onSuccessCallback.onSuccess(state);
+        } catch (BleError error) {
+            onErrorCallback.onError(error);
+            return;
+        }
     }
 
     @Override
@@ -1266,6 +1299,18 @@ public class BleModule implements BleAdapter {
         return device;
     }
 
+    @NonNull
+    private Device getKnownDeviceById(@NonNull final String deviceId) throws BleError {
+        Device device = connectedDevices.get(deviceId);
+        if (device == null) {
+            device = discoveredDevices.get(deviceId);
+        }
+        if (device == null) {
+            throw BleErrorUtils.deviceNotConnected(deviceId);
+        }
+        return device;
+    }
+
     @Nullable
     private RxBleConnection getConnectionOrEmitError(@NonNull final String deviceId,
                                                      @NonNull OnErrorCallback onErrorCallback) {
@@ -1460,6 +1505,19 @@ public class BleModule implements BleAdapter {
                 });
 
         pendingTransactions.replaceSubscription(transactionId, subscription);
+    }
+
+    private void safeRemoveBondForDevice(final Device device,
+                                        final String transactionId,
+                                        final OnSuccessCallback<Device> onSuccessCallback,
+                                        final OnErrorCallback onErrorCallback) {
+        try {
+            Method m = device.getBluetoothDevice().getClass().getMethod("removeBond", (Class[]) null);
+            m.invoke(device.getBluetoothDevice(), (Object[]) null);
+            onSuccessCallback.onSuccess(null);
+        } catch (Exception error) {
+            onErrorCallback.onError(new BleError(BleErrorCode.UnknownError, "Remove bond failed: " + error.getMessage(), 0));
+        }
     }
 
     private void safeReadCharacteristicForDevice(final Characteristic characteristic,

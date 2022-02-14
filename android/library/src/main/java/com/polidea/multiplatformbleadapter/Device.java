@@ -1,5 +1,6 @@
 package com.polidea.multiplatformbleadapter;
 
+import android.bluetooth.BluetoothDevice;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 
@@ -10,6 +11,7 @@ public class Device {
 
     private String id;
     private String name;
+    private BluetoothDevice bluetoothDevice;
     @Nullable
     private Integer rssi;
     @Nullable
@@ -17,9 +19,10 @@ public class Device {
     @Nullable
     private List<Service> services;
 
-    public Device(String id, String name) {
+    public Device(String id, String name, BluetoothDevice bluetoothDevice) {
         this.id = id;
         this.name = name;
+        this.bluetoothDevice = bluetoothDevice;
     }
 
     public String getId() {
@@ -36,6 +39,10 @@ public class Device {
 
     public void setName(String name) {
         this.name = name;
+    }
+
+    public BluetoothDevice getBluetoothDevice() {
+        return bluetoothDevice;
     }
 
     @Nullable

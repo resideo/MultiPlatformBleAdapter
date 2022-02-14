@@ -506,6 +506,39 @@ public class BleModule implements BleAdapter {
     }
 
     @Override
+    public void removeBondForDevice(String deviceIdentifier,
+                                    String transactionId,
+                                    OnSuccessCallback<Device> onSuccessCallback,
+                                    OnErrorCallback onErrorCallback) {
+        final Device device;
+        try {
+            device = getDeviceById(deviceIdentifier);
+        } catch (BleError error) {
+            onErrorCallback.onError(error);
+            return;
+        }
+
+        safeRemoveBondForDevice(device, transactionId, onSuccessCallback, onErrorCallback);
+    }
+
+    @Nullable
+    @Override
+    public void getBondStateForDevice(String deviceIdentifier,
+                                    String transactionId,
+                                    OnSuccessCallback<Device> onSuccessCallback,
+                                    OnErrorCallback onErrorCallback) {
+        final Device device;
+        try {
+            device = getDeviceById(deviceIdentifier);
+        } catch (BleError error) {
+            onErrorCallback.onError(error);
+            return null;
+        }
+
+        return safeGetBondStateForDevice(device, transactionId, onSuccessCallback, onErrorCallback);
+    }
+
+    @Override
     public List<Service> getServicesForDevice(String deviceIdentifier) throws BleError {
         final Device device = getDeviceById(deviceIdentifier);
         final List<Service> services = device.getServices();
@@ -1460,6 +1493,25 @@ public class BleModule implements BleAdapter {
                 });
 
         pendingTransactions.replaceSubscription(transactionId, subscription);
+    }
+
+    private void safeRemoveBondForDevice(final Device device,
+                                        final String transactionId,
+                                        final OnSuccessCallback<Device> onSuccessCallback,
+                                        final OnErrorCallback onErrorCallback) {
+        try {
+            Method m = device.getBluetoothDevice().getClass().getMethod("removeBond", (Class[]) null);
+            m.invoke(device, (Object[]) null);
+        } catch (Exception error) {
+            onErrorCallback.onError(error);
+        }
+    }
+
+    private int safeGetBondStateForDevice(final Device device,
+                                        final String transactionId,
+                                        final OnSuccessCallback<Device> onSuccessCallback,
+                                        final OnErrorCallback onErrorCallback) {
+        return device.getBluetoothDevice().getBondState();
     }
 
     private void safeReadCharacteristicForDevice(final Characteristic characteristic,

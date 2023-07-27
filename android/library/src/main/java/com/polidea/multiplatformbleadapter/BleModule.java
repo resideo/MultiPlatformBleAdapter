@@ -559,7 +559,7 @@ public class BleModule implements BleAdapter {
                                     OnErrorCallback onErrorCallback) {
         final Device device;
         try {
-            device = getDeviceById(deviceIdentifier);
+            device = getDiscoveredDeviceById(deviceIdentifier);
         } catch (BleError error) {
             onErrorCallback.onError(error);
             return;

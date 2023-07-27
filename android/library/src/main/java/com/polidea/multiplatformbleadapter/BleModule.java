@@ -1586,7 +1586,7 @@ public class BleModule implements BleAdapter {
                                         final OnSuccessCallback<Device> onSuccessCallback,
                                         final OnErrorCallback onErrorCallback) {
         try {
-            Method m = device.getBluetoothDevice().getClass().getMethod("removeBond", (Class[]) null);\
+            Method m = device.getBluetoothDevice().getClass().getMethod("removeBond", (Class[]) null);
             m.invoke(device.getBluetoothDevice(), (Object[]) null);
             onSuccessCallback.onSuccess(null);
         } catch (Exception error) {

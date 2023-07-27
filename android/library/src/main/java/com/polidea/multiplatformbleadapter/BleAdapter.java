@@ -214,6 +214,12 @@ public interface BleAdapter {
             OnSuccessCallback<Device> onSuccessCallback,
             OnErrorCallback onErrorCallback);
 
+    void getBondStateForDevice(
+            String deviceIdentifier,
+            String transactionId,
+            OnSuccessCallback<Integer> onSuccessCallback,
+            OnErrorCallback onErrorCallback);
+
     void createBondForDevice(
             String deviceIdentifier,
             String transactionId,

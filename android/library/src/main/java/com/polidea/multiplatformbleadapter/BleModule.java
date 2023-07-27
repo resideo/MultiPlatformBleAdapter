@@ -569,6 +569,21 @@ public class BleModule implements BleAdapter {
     }
 
     @Override
+    public void getBondStateForDevice(String deviceIdentifier,
+                                    String transactionId,
+                                    OnSuccessCallback<Integer> onSuccessCallback,
+                                    OnErrorCallback onErrorCallback) {
+        final Device device;
+        try {
+            device = getDeviceById(deviceIdentifier);
+            final int state = device.getBluetoothDevice().getBondState();
+            onSuccessCallback.onSuccess(state);
+        } catch (BleError error) {
+            onErrorCallback.onError(error);
+            return;
+        }
+    }
+  
     public void createBondForDevice(String deviceIdentifier,
                                     final String transactionId,
                                     final OnSuccessCallback<Boolean> onSuccessCallback,
@@ -580,10 +595,8 @@ public class BleModule implements BleAdapter {
             onErrorCallback.onError(error);
             return;
         }
-
         safeCreateBondForDevice(device, transactionId, onSuccessCallback, onErrorCallback);
     }
-
 
     @Override
     public List<Service> getServicesForDevice(String deviceIdentifier) throws BleError {
@@ -1347,6 +1360,18 @@ public class BleModule implements BleAdapter {
     }
 
     @NonNull
+    private Device getKnownDeviceById(@NonNull final String deviceId) throws BleError {
+        Device device = connectedDevices.get(deviceId);
+        if (device == null) {
+            device = discoveredDevices.get(deviceId);
+        }
+        if (device == null) {
+            throw BleErrorUtils.deviceNotConnected(deviceId);
+        }
+        return device;
+    }
+  
+    @NonNull
     private Device getDiscoveredDeviceById(@NonNull final String deviceId) throws BleError {
         Device device = discoveredDevices.get(deviceId);
         if (device != null) {
@@ -1562,13 +1587,13 @@ public class BleModule implements BleAdapter {
                                         final OnErrorCallback onErrorCallback) {
         try {
             Method m = device.getBluetoothDevice().getClass().getMethod("removeBond", (Class[]) null);
-            Object status = m.invoke(device.getBluetoothDevice(), (Object[]) null);
+            m.invoke(device.getBluetoothDevice(), (Object[]) null);
             onSuccessCallback.onSuccess(null);
         } catch (Exception error) {
             onErrorCallback.onError(new BleError(BleErrorCode.UnknownError, "Remove bond failed: " + error.getMessage(), 0));
         }
     }
-
+  
     Boolean bondingStarted = false;
     private void safeCreateBondForDevice(final Device device,
                                         final String transactionId,

@@ -1,11 +1,15 @@
 package com.polidea.multiplatformbleadapter;
 
 import android.bluetooth.BluetoothAdapter;
+import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothGattCharacteristic;
 import android.bluetooth.BluetoothGattDescriptor;
 import android.bluetooth.BluetoothGattService;
 import android.bluetooth.BluetoothManager;
+import android.content.BroadcastReceiver;
 import android.content.Context;
+import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.pm.PackageManager;
 import android.os.Build;
 import android.os.ParcelUuid;
@@ -14,6 +18,7 @@ import android.support.annotation.Nullable;
 import android.support.annotation.RequiresApi;
 import android.util.SparseArray;
 
+import com.polidea.multiplatformbleadapter.BleBondStateObservable;
 import com.polidea.multiplatformbleadapter.errors.BleError;
 import com.polidea.multiplatformbleadapter.errors.BleErrorCode;
 import com.polidea.multiplatformbleadapter.errors.BleErrorUtils;
@@ -54,6 +59,7 @@ import rx.functions.Action0;
 import rx.functions.Action1;
 import rx.functions.Func0;
 import rx.functions.Func1;
+import rx.functions.Func2;
 import rx.schedulers.Schedulers;
 
 import static com.polidea.multiplatformbleadapter.utils.Constants.BluetoothState;
@@ -101,10 +107,47 @@ public class BleModule implements BleAdapter {
 
     private int currentLogLevel = RxBleLog.NONE;
 
+    private IntentFilter intentFilter = new IntentFilter();
+
+    private BroadcastReceiver receiver;
+
     public BleModule(Context context) {
         this.context = context;
         bluetoothManager = (BluetoothManager) context.getSystemService(Context.BLUETOOTH_SERVICE);
         bluetoothAdapter = bluetoothManager.getAdapter();
+
+        intentFilter.addAction(BluetoothDevice.ACTION_PAIRING_REQUEST);
+        intentFilter.setPriority(IntentFilter.SYSTEM_HIGH_PRIORITY);
+        receiver = new BroadcastReceiver() {
+            @Override
+            public void onReceive(Context context, Intent intent) {
+                String action = intent.getAction();
+                if (action.equals(BluetoothDevice.ACTION_PAIRING_REQUEST)) {
+                    try {
+                        final BluetoothDevice device = intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE);
+
+                        int exraPairingVariant = intent.getIntExtra(BluetoothDevice.EXTRA_PAIRING_VARIANT, -1);
+                        if (exraPairingVariant == BluetoothDevice.PAIRING_VARIANT_PIN) {
+                            int pin = intent.getIntExtra(BluetoothDevice.EXTRA_PAIRING_KEY, -1);
+
+                            byte[] pinBytes;
+                            if (pin <= 0) {
+                                // if pin is not set, default to 4112
+                                pinBytes = ("4112").getBytes("UTF-8");
+                            }
+                            else {
+                                pinBytes = ("" + pin).getBytes("UTF-8");
+                            }
+                            boolean status = device.setPin(pinBytes);
+                            status = device.createBond();
+                            abortBroadcast();
+                        }
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
+                }
+            };
+        };
     }
 
     @Override
@@ -118,6 +161,7 @@ public class BleModule implements BleAdapter {
         if (restoreStateIdentifier != null) {
             onStateRestored.onEvent(null);
         }
+        context.registerReceiver(receiver, intentFilter);
     }
 
     @Override
@@ -142,6 +186,8 @@ public class BleModule implements BleAdapter {
 
         rxBleClient = null;
         IdGenerator.clear();
+
+        context.unregisterReceiver(receiver);
     }
 
 
@@ -513,7 +559,7 @@ public class BleModule implements BleAdapter {
                                     OnErrorCallback onErrorCallback) {
         final Device device;
         try {
-            device = getKnownDeviceById(deviceIdentifier);
+            device = getDeviceById(deviceIdentifier);
         } catch (BleError error) {
             onErrorCallback.onError(error);
             return;
@@ -536,6 +582,20 @@ public class BleModule implements BleAdapter {
             onErrorCallback.onError(error);
             return;
         }
+    }
+  
+    public void createBondForDevice(String deviceIdentifier,
+                                    final String transactionId,
+                                    final OnSuccessCallback<Boolean> onSuccessCallback,
+                                    final OnErrorCallback onErrorCallback) {
+        final Device device;
+        try {
+            device = getDiscoveredDeviceById(deviceIdentifier);
+        } catch (BleError error) {
+            onErrorCallback.onError(error);
+            return;
+        }
+        safeCreateBondForDevice(device, transactionId, onSuccessCallback, onErrorCallback);
     }
 
     @Override
@@ -1310,6 +1370,20 @@ public class BleModule implements BleAdapter {
         }
         return device;
     }
+  
+    @NonNull
+    private Device getDiscoveredDeviceById(@NonNull final String deviceId) throws BleError {
+        Device device = discoveredDevices.get(deviceId);
+        if (device != null) {
+            return device;
+        }
+
+        device = connectedDevices.get(deviceId);
+        if (device != null) {
+            return device;
+        }
+        throw BleErrorUtils.deviceNotConnected(deviceId);
+    }
 
     @Nullable
     private RxBleConnection getConnectionOrEmitError(@NonNull final String deviceId,
@@ -1512,11 +1586,81 @@ public class BleModule implements BleAdapter {
                                         final OnSuccessCallback<Device> onSuccessCallback,
                                         final OnErrorCallback onErrorCallback) {
         try {
-            Method m = device.getBluetoothDevice().getClass().getMethod("removeBond", (Class[]) null);
+            Method m = device.getBluetoothDevice().getClass().getMethod("removeBond", (Class[]) null);\
             m.invoke(device.getBluetoothDevice(), (Object[]) null);
             onSuccessCallback.onSuccess(null);
         } catch (Exception error) {
             onErrorCallback.onError(new BleError(BleErrorCode.UnknownError, "Remove bond failed: " + error.getMessage(), 0));
+        }
+    }
+  
+    Boolean bondingStarted = false;
+    private void safeCreateBondForDevice(final Device device,
+                                        final String transactionId,
+                                        final OnSuccessCallback<Boolean> onSuccessCallback,
+                                        final OnErrorCallback onErrorCallback) {
+
+        try {
+            final SafeExecutor<Boolean> safeExecutor = new SafeExecutor<>(onSuccessCallback, onErrorCallback);
+
+            final Subscription subscription = new BleBondStateObservable(context, device.getBluetoothDevice())
+                .timeout(60, TimeUnit.SECONDS)
+                .doOnUnsubscribe(new Action0() {
+                    @Override
+                    public void call() {
+                        pendingTransactions.removeSubscription(transactionId);
+                    }
+                })
+                .subscribe(new Observer<BleBondStateObservable.BleBondStateChange>() {
+                        @Override
+                        public void onCompleted() {
+                            pendingTransactions.removeSubscription(transactionId);
+                        }
+
+                        @Override
+                        public void onError(Throwable error) {
+                            safeExecutor.error(errorConverter.toError(error));
+                            pendingTransactions.removeSubscription(transactionId);
+                        }
+
+                        @Override
+                        public void onNext(BleBondStateObservable.BleBondStateChange state) {
+                            if (state.getNewState() == BluetoothDevice.BOND_BONDED) {
+                                safeExecutor.success(true);
+                            }
+                            else if (state.getNewState() == BluetoothDevice.BOND_NONE) {
+                                if (bondingStarted) {
+                                    safeExecutor.error(new BleError(BleErrorCode.UnknownError, "Create bond failed without Pairing request", 0));
+                                }
+                            }
+                            else {
+                                bondingStarted = true;
+                            }
+                        }
+                    });
+
+
+            int bondState = device.getBluetoothDevice().getBondState();
+            if (bondState == BluetoothDevice.BOND_BONDED) {
+                onSuccessCallback.onSuccess(true);
+                return;
+            }
+
+            boolean status = device.getBluetoothDevice().createBond();
+            boolean pinSet = device.getBluetoothDevice().setPin("0000".getBytes());
+
+            if (!status) {
+                onErrorCallback.onError(new BleError(
+                        BleErrorCode.DeviceAlreadyConnected,
+                        "Can't create bond with device",
+                        null));
+                return;
+            }
+
+            pendingTransactions.replaceSubscription(transactionId, subscription);
+
+        } catch (Exception error) {
+            onErrorCallback.onError(new BleError(BleErrorCode.UnknownError, "Create bond failed: " + error.getMessage(), 0));
         }
     }
 

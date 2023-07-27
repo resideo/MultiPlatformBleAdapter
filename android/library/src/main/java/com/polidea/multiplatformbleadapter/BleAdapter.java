@@ -220,6 +220,12 @@ public interface BleAdapter {
             OnSuccessCallback<Integer> onSuccessCallback,
             OnErrorCallback onErrorCallback);
 
+    void createBondForDevice(
+            String deviceIdentifier,
+            String transactionId,
+            OnSuccessCallback<Boolean> onSuccessCallback,
+            OnErrorCallback onErrorCallback);
+
     void writeDescriptorForDevice(
             final String deviceId,
             final String serviceUUID,

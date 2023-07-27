@@ -10,7 +10,7 @@ buildscript {
         mavenCentral()
     }
     dependencies {
-        classpath 'com.android.tools.build:gradle:3.4.2'
+        classpath 'com.android.tools.build:gradle:3.6.0'
         classpath 'com.github.dcendents:android-maven-gradle-plugin:2.1'
     }
 }
@@ -18,13 +18,21 @@ buildscript {
 repositories {
     google()
     jcenter()
+    maven { url "https://jitpack.io" }
+    maven {
+        url = 'https://maven.pkg.github.com/resideo/RxAndroidBle'
+        credentials {
+            username = System.getenv('GITHUB_ACTOR') ?: System.getenv('GITHUB_USER')
+            password = System.getenv('GITHUB_TOKEN')
+        }
+    }
 }
 
 android {
     compileSdkVersion 28
 
     defaultConfig {
-        minSdkVersion 18
+        minSdkVersion 26
         targetSdkVersion 28
         versionCode 1
         versionName "1.0"
@@ -42,7 +50,10 @@ android {
 
 dependencies {
     implementation fileTree(dir: 'libs', include: ['*.jar'])
-    implementation "com.polidea.rxandroidble:rxandroidble:1.7.1"
+    implementation 'com.github.resideo.rxandroidble:rxandroidble:1.0.0'
+    implementation 'com.android.support:support-annotations:28.0.0'
+    implementation 'io.reactivex:rxjava:1.3.8'
+    implementation 'com.jakewharton.rxrelay:rxrelay:1.2.0'
     testImplementation 'junit:junit:4.12'
 }
 
@@ -54,3 +65,5 @@ task sourcesJar(type: Jar) {
 artifacts {
     archives sourcesJar
 }
+
+apply from: '../gradle/publish_github.gradle'

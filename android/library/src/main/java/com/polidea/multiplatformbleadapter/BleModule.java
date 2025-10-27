@@ -99,6 +99,12 @@ public class BleModule implements BleAdapter {
     @Nullable
     private Subscription adapterStateChangesSubscription;
 
+    @Nullable
+    private android.bluetooth.le.BluetoothLeScanner nativeScanner;
+
+    @Nullable
+    private com.polidea.multiplatformbleadapter.utils.NativeScanCallbackWrapper nativeScanCallback;
+
     private RxBleDeviceToDeviceMapper rxBleDeviceToDeviceMapper = new RxBleDeviceToDeviceMapper();
 
     private RxScanResultToScanResultMapper rxScanResultToScanResultMapper = new RxScanResultToScanResultMapper();
@@ -246,6 +252,19 @@ public class BleModule implements BleAdapter {
             scanSubscription.unsubscribe();
             scanSubscription = null;
         }
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            if (nativeScanner != null && nativeScanCallback != null) {
+                try {
+                    nativeScanner.stopScan(nativeScanCallback);
+                } catch (Exception ignored) {
+                }
+                nativeScanner = null;
+                nativeScanCallback = null;
+            }
+        }
+
+        com.polidea.multiplatformbleadapter.utils.IsConnectableCache.getInstance().clear();
     }
 
     @Override
@@ -1329,6 +1348,34 @@ public class BleModule implements BleAdapter {
         ScanFilter[] filters = new ScanFilter[length];
         for (int i = 0; i < length; i++) {
             filters[i] = new ScanFilter.Builder().setServiceUuid(ParcelUuid.fromString(uuids[i].toString())).build();
+        }
+
+        // Start native scanner to capture isConnectable (API 26+)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && bluetoothAdapter != null) {
+            try {
+                nativeScanner = bluetoothAdapter.getBluetoothLeScanner();
+                if (nativeScanner != null) {
+                    nativeScanCallback = new com.polidea.multiplatformbleadapter.utils.NativeScanCallbackWrapper();
+
+                    android.bluetooth.le.ScanSettings nativeSettings = new android.bluetooth.le.ScanSettings.Builder()
+                            .setScanMode(scanMode)
+                            .setCallbackType(callbackType)
+                            .build();
+
+                    List<android.bluetooth.le.ScanFilter> nativeFilters = new ArrayList<>();
+                    for (ScanFilter filter : filters) {
+                        android.bluetooth.le.ScanFilter.Builder nativeFilterBuilder = new android.bluetooth.le.ScanFilter.Builder();
+                        if (filter.getServiceUuid() != null) {
+                            nativeFilterBuilder.setServiceUuid(filter.getServiceUuid());
+                        }
+                        nativeFilters.add(nativeFilterBuilder.build());
+                    }
+
+                    nativeScanner.startScan(nativeFilters, nativeSettings, nativeScanCallback);
+                }
+            } catch (Exception e) {
+                // Don't fail the scan if native scanner fails
+            }
         }
 
         scanSubscription = rxBleClient

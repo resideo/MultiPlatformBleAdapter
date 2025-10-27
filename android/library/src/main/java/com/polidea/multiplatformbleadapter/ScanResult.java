@@ -10,13 +10,16 @@ public class ScanResult {
     private String deviceName;
     private int rssi;
     private int mtu;
+    // Nullable because older Android APIs (<26) and older rxandroidble versions may
+    // not expose this.
     @Nullable
-    private boolean isConnectable;
+    private Boolean isConnectable;
     @Nullable
     private UUID[] overflowServiceUUIDs;
     private AdvertisementData advertisementData;
 
-    public ScanResult(String deviceId, String deviceName, int rssi, int mtu, boolean isConnectable, UUID[] overflowServiceUUIDs, AdvertisementData advertisementData) {
+    public ScanResult(String deviceId, String deviceName, int rssi, int mtu, @Nullable Boolean isConnectable,
+            UUID[] overflowServiceUUIDs, AdvertisementData advertisementData) {
         this.deviceId = deviceId;
         this.deviceName = deviceName;
         this.rssi = rssi;
@@ -58,11 +61,16 @@ public class ScanResult {
         this.mtu = mtu;
     }
 
-    public boolean isConnectable() {
+    // Both getters provided for FlutterBleLib reflection compatibility
+    public Boolean isConnectable() {
         return isConnectable;
     }
 
-    public void setConnectable(boolean connectable) {
+    public Boolean getIsConnectable() {
+        return isConnectable;
+    }
+
+    public void setConnectable(@Nullable Boolean connectable) {
         isConnectable = connectable;
     }
 

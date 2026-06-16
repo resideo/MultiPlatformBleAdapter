@@ -3,7 +3,7 @@ package com.polidea.multiplatformbleadapter.utils;
 import android.bluetooth.le.ScanCallback;
 import android.bluetooth.le.ScanResult;
 import android.os.Build;
-import android.support.annotation.RequiresApi;
+import androidx.annotation.RequiresApi;
 
 import java.util.List;
 

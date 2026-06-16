@@ -1031,9 +1031,9 @@ public class BleModule implements BleAdapter {
                     safeExecutor.error(BleErrorUtils.cancelled());
                     pendingTransactions.removeSubscription(transactionId);
                 })
-                .subscribe(bytes -> {
-                    descriptor.logValue("Write to", bytes);
-                    descriptor.setValue(bytes);
+                .subscribe(() -> {
+                    descriptor.logValue("Write to", value);
+                    descriptor.setValue(value);
                     safeExecutor.success(new Descriptor(descriptor));
                     pendingTransactions.removeSubscription(transactionId);
                 }, e -> {

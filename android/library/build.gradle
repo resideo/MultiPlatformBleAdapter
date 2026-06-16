@@ -5,7 +5,6 @@ group='com.github.Polidea'
 repositories {
     google()
     mavenCentral()
-    maven { url "https://jitpack.io" }
 }
 
 android {
@@ -31,7 +30,7 @@ android {
 
 dependencies {
     implementation fileTree(dir: 'libs', include: ['*.jar'])
-    implementation 'com.github.dariuszseweryn.RxAndroidBle:rxandroidble:1.19.1'
+    implementation 'com.polidea.rxandroidble2:rxandroidble:1.19.1'
     implementation 'androidx.annotation:annotation:1.7.1'
     implementation 'io.reactivex.rxjava2:rxjava:2.2.21'
     implementation 'com.jakewharton.rxrelay2:rxrelay:2.1.1'

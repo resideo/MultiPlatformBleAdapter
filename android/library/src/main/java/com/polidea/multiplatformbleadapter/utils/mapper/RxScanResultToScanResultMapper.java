@@ -9,7 +9,7 @@ import com.polidea.multiplatformbleadapter.utils.IsConnectableCache;
 
 public class RxScanResultToScanResultMapper {
 
-    public ScanResult map(com.polidea.rxandroidble.scan.ScanResult rxScanResult) {
+    public ScanResult map(com.polidea.rxandroidble2.scan.ScanResult rxScanResult) {
         String macAddress = rxScanResult.getBleDevice().getMacAddress();
         Boolean isConnectable = null;
 

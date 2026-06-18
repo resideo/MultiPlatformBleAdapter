@@ -1,6 +1,7 @@
 apply plugin: 'com.android.library'
 
-group='com.github.Polidea'
+group='com.resideo.multiplatformbleadapter'
+version='1.0.0'
 
 repositories {
     google()
